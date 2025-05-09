@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolving to Cloud-Native Architectures: Lessons from the Trenches - Aayush Neupane's Blog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <div class="blog-post">
+        <h1>Evolving to Cloud-Native Architectures: Lessons from the Trenches</h1>
+        <span class="meta">May 8, 2025 · 8 min read</span>
+
+        <p>After a decade architecting distributed systems and dragging monoliths kicking and screaming into the cloud era, I've collected some battle scars and hard-won wisdom about what actually works. Let's cut through the bullshit and talk about the real challenges of going cloud-native.</p>
+
+        <h2>The Monolith is Not Your Enemy</h2>
+
+        <p>Look, I get it. Microservices are sexy. Kubernetes is what all the cool kids are using. But here's the honest truth that no one at tech conferences wants to admit: your monolith is probably fine. Our team spent eight months breaking apart a perfectly functional monolith because "microservices architecture" was on our CTO's bingo card. The result? Way more complexity, distributed debugging nightmares, and a system that was actually slower thanks to network latency.
+
+        Don't get me wrong - there are legitimate reasons to break things up. When our user base hit 3 million and our deployment times stretched to hours, we needed to make a change. But we did it incrementally, extracting services where it made sense, not as some grand re-architecture. The pragmatic approach is to start with a well-structured monolith and extract services only when you have clear scaling or team ownership boundaries. I've watched too many startups shoot themselves in the foot trying to act like Google when they have 1/1000th of the traffic.</p>
+
+        <h2>Container Orchestration: The Good, The Bad, and The Ugly</h2>
+
+        <p>Container orchestration platforms are incredible pieces of technology, but they come with real costs. The first time we rolled out our production Kubernetes cluster, we slashed our AWS bill by 42% through better resource utilization. Sweet, right? Then we spent the next three months building expertise in a completely new operational domain.
+
+        Here's what they don't tell you in the glossy case studies: the learning curve is brutal. Our first on-call rotation after going live with K8s was a special kind of hell. Resource limits? Networking policies? Persistent volume claims? We were drowning in YAML and obscure error messages. And God help you if you need to debug something that spans multiple services. Our MTTR (Mean Time To Recovery) actually increased initially because our team was still climbing the knowledge ladder.
+
+        Four years and many war stories later, we've finally hit our stride. Deployments are boring (as they should be). Auto-scaling actually works. But was it worth it? For our scale, absolutely. For smaller teams? It's way more complex than most vendors want to admit. Start with simple container deployments and managed services before you dive into the deep end of container orchestration.</p>
+
+        <h2>Statelessness is Next to Godliness</h2>
+
+        <p>The single biggest win in our cloud migration was embracing truly stateless application design. In our old world, we had sticky sessions, local file storage, and in-memory caching that made horizontal scaling nearly impossible. Each server was a unique snowflake that couldn't be replaced without ceremony.
+
+        Moving state out of our application tier and into purpose-built data services changed everything. Session data went to a distributed cache. File storage moved to object storage. Application configs shifted to a centralized service. Suddenly, our application instances became cattle instead of pets - we could scale up, down, or replace instances without users noticing a thing.
+
+        The operational benefits have been massive. We survived a complete region failure by spinning up capacity in a backup region in under 15 minutes. Our release process no longer involves sacred deployment windows and crossed fingers. We can load test by temporarily 10x-ing our compute capacity, then scaling back down when we're done.</p>
+
+        <h2>Observability is Not Optional</h2>
+
+        <p>In a distributed system, observability isn't a nice-to-have - it's table stakes. We learned this lesson the hard way after a cascade of failures that took down our platform for four hours while we played whack-a-mole with symptoms rather than addressing the root cause.
+
+        Logs aren't enough. Metrics aren't enough. Even traces aren't enough on their own. You need all three, thoughtfully implemented, to have any shot at understanding a distributed system under duress. We now treat our observability stack with the same care as our production code. We do observability-driven development, asking ourselves: "How will we know if this works in production? How will we debug it when it doesn't?"
+
+        Our current approach ties business KPIs directly to technical metrics and uses SLOs (Service Level Objectives) to guide our reliability work. This alignment means we're investing in stability and performance improvements that actually matter to users, not just chasing nines for vanity metrics. When something breaks, we can follow the request path across service boundaries and quickly identify where things went sideways.</p>
+
+        <h2>Cost Management: The Cloud's Awkward Secret</h2>
+
+        <p>Nobody likes to talk about this, but I will: the cloud is expensive as hell if you're not careful. Our first few AWS bills after migration nearly gave our CFO a heart attack. We were paying for convenience with a massive markup, and our developers had no incentive to care about resource efficiency.
+
+        Over time, we've built a culture of cost awareness. Every team can see the cloud spend their services generate. We celebrate efficiency improvements alongside feature launches. Reserved instances, spot capacity, and auto-scaling based on actual load patterns have cut our bill in half while serving more traffic.
+
+        The most impactful change, though, was implementing infrastructure as code for everything. No more clicking around in consoles creating snowflake resources. Every piece of infrastructure is versioned, reviewed, and reproducible. This hasn't just saved money - it's made our entire platform more resilient because we can rebuild it from scratch if needed.</p>
+
+        <h2>The Human Element</h2>
+
+        <p>Here's the part most technical posts miss: the biggest challenges in going cloud-native aren't technical - they're human. Our engineers needed new skills. Our processes had to change. Some of our best people struggled with the transition because patterns that had served them well for years suddenly didn't apply.
+
+        We invested heavily in training, pair programming, and bringing in experts to level up the team. We created sandboxes where people could experiment and learn without fear of breaking production. We celebrated learning and adaptation as much as execution.
+
+        Most critically, we recognized that this was a journey, not a flip-the-switch moment. We set realistic timelines that accounted for the learning curve. Teams that try to transform overnight typically fail spectacularly. We planned for a two-year transition and communicated that timeline transparently to everyone from individual contributors to the board.</p>
+
+        <h2>The Bottom Line</h2>
+
+        <p>Cloud-native architectures deliver on their promises if - and this is a big if - you approach them with eyes wide open. The patterns work. The technologies are mature. But the journey requires honest assessment of your needs, incremental adoption, significant investment in team capabilities, and a pragmatic view of the real benefits and costs.
+
+        If I had to distill a decade of experience into one piece of advice, it would be this: ruthlessly question why you're adopting each cloud-native pattern or technology. If the answer is "because Netflix does it" or "it was in that conference keynote," pump the brakes. The only good reason is that it solves a specific, validated problem your team is facing right now or in the immediate future. Everything else is just expensive learning.</p>
+
+        <a href="../blog.html" class="back-link">← Back to Blog</a>
+    </div>
+</body>
+</html>
