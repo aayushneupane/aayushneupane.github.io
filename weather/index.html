@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airport Weather - 24hr Temperature</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .location-selector {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .location-selector button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+
+        .location-selector button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .location-selector button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .airport-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .airport-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .airport-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .airport-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .airport-code {
+            font-size: 1.2em;
+            color: #999;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .stat-value.max {
+            color: #ff4444;
+        }
+
+        .stat-value.min {
+            color: #4444ff;
+        }
+
+        .stat-value.current {
+            color: #667eea;
+        }
+
+        .timeline {
+            margin-top: 20px;
+        }
+
+        .temp-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .temp-item.past {
+            border-left-color: #999;
+            opacity: 0.8;
+        }
+
+        .temp-item.future {
+            border-left-color: #667eea;
+        }
+
+        .temp-item.current {
+            border-left-color: #ff9500;
+            background: #fff3e0;
+            font-weight: bold;
+        }
+
+        .time-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .label-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+        }
+
+        .label-badge.past {
+            background: #999;
+        }
+
+        .label-badge.current {
+            background: #ff9500;
+        }
+
+        .temp-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            padding: 40px;
+        }
+
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .refresh-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            display: block;
+            margin: 20px auto;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌡️ Airport Weather - 24 Hour Temperature</h1>
+            <p>Midnight to Midnight Temperature Data</p>
+        </header>
+
+        <div class="location-selector" id="location-buttons"></div>
+
+        <button class="refresh-btn" onclick="loadAllLocations()">🔄 Refresh All</button>
+
+        <div id="loading" class="loading" style="display: none;">
+            Loading weather data...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div class="airport-grid" id="airport-grid"></div>
+    </div>
+
+    <script>
+        // Airport locations with their station IDs
+        const LOCATIONS = [
+            { code: 'KLAX', name: 'Los Angeles', lat: 33.9425, lon: -118.4081 },
+            { code: 'KNYC', name: 'New York Central Park', lat: 40.7789, lon: -73.9692, stationId: 'KNYC' },
+            { code: 'KSFO', name: 'San Francisco', lat: 37.6213, lon: -122.3790 },
+            { code: 'KMIA', name: 'Miami', lat: 25.7959, lon: -80.2870 },
+            { code: 'KDEN', name: 'Denver', lat: 39.8561, lon: -104.6737 },
+            { code: 'KHOU', name: 'Houston Hobby', lat: 29.6454, lon: -95.2789 },
+            { code: 'KSEA', name: 'Seattle', lat: 47.4502, lon: -122.3088 },
+            { code: 'KAUS', name: 'Austin', lat: 30.1945, lon: -97.6699 },
+            { code: 'KDFW', name: 'Dallas Fort Worth', lat: 32.8968, lon: -97.0380 },
+            { code: 'KMDW', name: 'Chicago Midway', lat: 41.7868, lon: -87.7522 }
+        ];
+
+        let selectedLocation = 'KAUS'; // Default to Austin
+
+        function initLocationButtons() {
+            const container = document.getElementById('location-buttons');
+            container.innerHTML = LOCATIONS.map(loc => `
+                <button
+                    onclick="selectLocation('${loc.code}')"
+                    id="btn-${loc.code}"
+                    class="${selectedLocation === loc.code ? 'active' : ''}">
+                    ${loc.code.replace('K', '')}
+                </button>
+            `).join('');
+        }
+
+        function selectLocation(code) {
+            // Deactivate all buttons
+            LOCATIONS.forEach(loc => {
+                document.getElementById(`btn-${loc.code}`).classList.remove('active');
+            });
+
+            // Activate selected button
+            document.getElementById(`btn-${code}`).classList.add('active');
+            selectedLocation = code;
+
+            loadAllLocations();
+        }
+
+        async function fetchWeatherAPI(url) {
+            const proxyUrl = url.replace('https://api.weather.gov/', '/api/weather/');
+            const response = await fetch(proxyUrl);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return response.json();
+        }
+
+        function getMidnights() {
+            const now = new Date();
+            const lastMidnight = new Date(now);
+            lastMidnight.setHours(0, 0, 0, 0);
+
+            const nextMidnight = new Date(lastMidnight);
+            nextMidnight.setDate(nextMidnight.getDate() + 1);
+
+            return { lastMidnight, nextMidnight, now };
+        }
+
+        function celsiusToFahrenheit(celsius) {
+            return (celsius * 9/5 + 32).toFixed(1);
+        }
+
+        async function loadLocationWeather(location) {
+            try {
+                console.log(`Loading weather for ${location.code}...`);
+
+                // Get observations
+                const observationsData = await fetchWeatherAPI(
+                    `https://api.weather.gov/stations/${location.code}/observations?limit=50`
+                );
+
+                // Get forecast via grid point
+                const pointData = await fetchWeatherAPI(
+                    `https://api.weather.gov/points/${location.lat},${location.lon}`
+                );
+                const forecastData = await fetchWeatherAPI(pointData.properties.forecastHourly);
+
+                return processWeatherData(location, observationsData.features, forecastData.properties.periods);
+            } catch (error) {
+                console.error(`Error loading ${location.code}:`, error);
+                return null;
+            }
+        }
+
+        function processWeatherData(location, observations, forecast) {
+            const { lastMidnight, nextMidnight, now } = getMidnights();
+            const allData = [];
+
+            // Process past observations (from last midnight to now)
+            observations.forEach(obs => {
+                const obsTime = new Date(obs.properties.timestamp);
+                if (obsTime >= lastMidnight && obsTime <= now) {
+                    const temp = obs.properties.temperature.value;
+                    if (temp !== null) {
+                        allData.push({
+                            time: obsTime,
+                            temp: parseFloat(celsiusToFahrenheit(temp)),
+                            isPast: true,
+                            isCurrent: false
+                        });
+                    }
+                }
+            });
+
+            // Process future forecast (from now to next midnight)
+            forecast.forEach(period => {
+                const periodStart = new Date(period.startTime);
+                if (periodStart > now && periodStart < nextMidnight) {
+                    allData.push({
+                        time: periodStart,
+                        temp: period.temperature,
+                        isPast: false,
+                        isCurrent: false
+                    });
+                }
+            });
+
+            // Sort by time
+            allData.sort((a, b) => a.time - b.time);
+
+            // Mark current time (closest to now)
+            let currentIndex = -1;
+            if (allData.length > 0) {
+                let closestIndex = 0;
+                let minDiff = Math.abs(allData[0].time - now);
+
+                allData.forEach((item, index) => {
+                    const diff = Math.abs(item.time - now);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestIndex = index;
+                    }
+                });
+
+                allData[closestIndex].isCurrent = true;
+                currentIndex = closestIndex;
+            }
+
+            // Calculate temperature trend
+            let trend = 'stable';
+            if (currentIndex > 0 && currentIndex < allData.length - 1) {
+                const currentTemp = allData[currentIndex].temp;
+                const prevTemp = allData[currentIndex - 1].temp;
+                const nextTemp = allData[currentIndex + 1].temp;
+
+                // Compare with previous and next temps
+                const avgChange = ((currentTemp - prevTemp) + (nextTemp - currentTemp)) / 2;
+
+                if (avgChange > 1) {
+                    trend = 'increasing';
+                } else if (avgChange < -1) {
+                    trend = 'decreasing';
+                }
+            } else if (currentIndex === 0 && allData.length > 1) {
+                // Only future data available
+                if (allData[1].temp > allData[0].temp) {
+                    trend = 'increasing';
+                } else if (allData[1].temp < allData[0].temp) {
+                    trend = 'decreasing';
+                }
+            } else if (currentIndex > 0) {
+                // Compare with just previous
+                if (allData[currentIndex].temp > allData[currentIndex - 1].temp) {
+                    trend = 'increasing';
+                } else if (allData[currentIndex].temp < allData[currentIndex - 1].temp) {
+                    trend = 'decreasing';
+                }
+            }
+
+            // Calculate stats
+            const temps = allData.map(d => d.temp);
+            const max = Math.max(...temps);
+            const min = Math.min(...temps);
+            const current = allData.find(d => d.isCurrent)?.temp || temps[temps.length - 1];
+
+            return {
+                location,
+                data: allData,
+                stats: { max, min, current, trend }
+            };
+        }
+
+        function renderAirportCard(weatherData) {
+            if (!weatherData) return '';
+
+            const { location, data, stats } = weatherData;
+
+            // Trend indicator
+            let trendIcon = '→';
+            let trendText = 'Stable';
+            let trendColor = '#667eea';
+
+            if (stats.trend === 'increasing') {
+                trendIcon = '↗';
+                trendText = 'Rising';
+                trendColor = '#ff4444';
+            } else if (stats.trend === 'decreasing') {
+                trendIcon = '↘';
+                trendText = 'Falling';
+                trendColor = '#4444ff';
+            }
+
+            return `
+                <div class="airport-card">
+                    <div class="airport-header">
+                        <div class="airport-name">${location.name}</div>
+                        <div class="airport-code">${location.code.replace('K', '')}</div>
+                    </div>
+
+                    <div class="stats-bar">
+                        <div class="stat">
+                            <div class="stat-label">24hr MAX</div>
+                            <div class="stat-value max">${stats.max.toFixed(1)}°F</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">CURRENT <span style="font-size: 0.8em; color: ${trendColor};">${trendIcon} ${trendText}</span></div>
+                            <div class="stat-value current">${stats.current.toFixed(1)}°F</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">24hr MIN</div>
+                            <div class="stat-value min">${stats.min.toFixed(1)}°F</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline">
+                        ${data.map(item => {
+                            const timeStr = item.time.toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+
+                            let badge = '';
+                            let itemClass = 'temp-item';
+
+                            if (item.isCurrent) {
+                                badge = '<span class="label-badge current">NOW</span>';
+                                itemClass += ' current';
+                            } else if (item.isPast) {
+                                badge = '<span class="label-badge past">PAST</span>';
+                                itemClass += ' past';
+                            } else {
+                                badge = '<span class="label-badge">FORECAST</span>';
+                                itemClass += ' future';
+                            }
+
+                            return `
+                                <div class="${itemClass}">
+                                    <div class="time-label">
+                                        ${badge}
+                                        ${timeStr}
+                                    </div>
+                                    <div class="temp-value">${item.temp.toFixed(1)}°F</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadAllLocations() {
+            const grid = document.getElementById('airport-grid');
+            const loading = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
+            grid.innerHTML = '';
+
+            try {
+                const locationToLoad = LOCATIONS.find(loc => loc.code === selectedLocation);
+
+                if (!locationToLoad) {
+                    throw new Error('Location not found');
+                }
+
+                const result = await loadLocationWeather(locationToLoad);
+
+                if (result) {
+                    grid.innerHTML = renderAirportCard(result);
+                } else {
+                    throw new Error('Failed to load weather data');
+                }
+
+            } catch (error) {
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+                console.error('Error:', error);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initLocationButtons();
+            loadAllLocations();
+        });
+    </script>
+</body>
+</html>
+
+    <script>
+        // Austin, TX coordinates
+        const AUSTIN_LAT = 30.2672;
+        const AUSTIN_LON = -97.7431;
+
+        async function fetchWeatherAPI(url) {
+            console.log('Fetching:', url);
+
+            // NWS API requires a User-Agent header
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'WeatherDashboard (your-email@example.com)',
+                    'Accept': 'application/geo+json'
+                }
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response headers:', [...response.headers.entries()]);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
+
+        async function loadWeatherData() {
+            showLoading(true);
+            hideError();
+
+            try {
+                // Get grid point info for Austin
+                console.log('Step 1: Fetching grid point data...');
+                const pointData = await fetchWeatherAPI(
+                    `https://api.weather.gov/points/${AUSTIN_LAT},${AUSTIN_LON}`
+                );
+                console.log('Point data:', pointData);
+
+                // Get forecast and observation station
+                const forecastUrl = pointData.properties.forecast;
+                const observationStationsUrl = pointData.properties.observationStations;
+
+                console.log('Step 2: Fetching forecast from:', forecastUrl);
+                const forecastData = await fetchWeatherAPI(forecastUrl);
+                console.log('Forecast data:', forecastData);
+
+                console.log('Step 3: Fetching observation stations from:', observationStationsUrl);
+                const stationsData = await fetchWeatherAPI(observationStationsUrl);
+                console.log('Stations data:', stationsData);
+
+                const stationId = stationsData.features[0].properties.stationIdentifier;
+                console.log('Station ID:', stationId);
+
+                // Fetch latest observations
+                const observationsUrl = `https://api.weather.gov/stations/${stationId}/observations?limit=24`;
+                console.log('Step 4: Fetching observations from:', observationsUrl);
+                const observationsData = await fetchWeatherAPI(observationsUrl);
+                console.log('Observations data:', observationsData);
+
+                // Display data
+                displayHistoricalData(observationsData.features);
+                displayForecastData(forecastData.properties.periods);
+
+            } catch (error) {
+                showError(`Error loading weather data: ${error.message}. Check browser console for details.`);
+                console.error('Full error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayHistoricalData(observations) {
+            const container = document.getElementById('historical-data');
+
+            if (!observations || observations.length === 0) {
+                container.innerHTML = '<p>No historical data available</p>';
+                return;
+            }
+
+            // Filter to last 24 hours
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+            const recent = observations.filter(obs => {
+                const obsTime = new Date(obs.properties.timestamp);
+                return obsTime >= yesterday;
+            });
+
+            container.innerHTML = recent.slice(0, 8).map(obs => {
+                const props = obs.properties;
+                const time = new Date(props.timestamp);
+                const temp = props.temperature.value;
+                const tempF = temp ? (temp * 9/5 + 32).toFixed(1) : 'N/A';
+                const description = props.textDescription || 'N/A';
+                const humidity = props.relativeHumidity.value ? props.relativeHumidity.value.toFixed(0) : 'N/A';
+                const windSpeed = props.windSpeed.value ? props.windSpeed.value.toFixed(1) : 'N/A';
+
+                return `
+                    <div class="weather-item">
+                        <div class="time">${time.toLocaleTimeString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}</div>
+                        <div class="details">
+                            🌡️ ${tempF}°F | 💧 ${humidity}% humidity<br>
+                            💨 Wind: ${windSpeed} km/h | ${description}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function displayForecastData(periods) {
+            const container = document.getElementById('forecast-data');
+
+            if (!periods || periods.length === 0) {
+                container.innerHTML = '<p>No forecast data available</p>';
+                return;
+            }
+
+            // Get next 24 hours worth of periods (usually 2-3 periods)
+            const next24Hours = periods.slice(0, 3);
+
+            container.innerHTML = next24Hours.map(period => {
+                return `
+                    <div class="forecast-item">
+                        <div class="period-name">${period.name}</div>
+                        <div class="temp">${period.temperature}°${period.temperatureUnit}</div>
+                        <div class="details">
+                            💨 ${period.windSpeed} ${period.windDirection}<br>
+                            ${period.shortForecast}
+                        </div>
+                        <div class="description">${period.detailedForecast}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadWeatherData);
+    </script>
+</body>
+</html>
