@@ -196,17 +196,24 @@ function processWeatherData(location, observations, forecast, gridTemperatures =
         if (obsTime >= lastMidnight && obsTime < nextMidnight) {
             const temp = obs.properties.temperature.value;
             if (temp !== null) {
+                // Detect high-confidence data (hourly METAR with rawMessage)
+                const hasRawMessage = obs.properties.rawMessage && obs.properties.rawMessage.length > 0;
+                const isHighConfidence = hasRawMessage;
+
                 allData.push({
                     time: obsTime,
                     temp: parseFloat(celsiusToFahrenheit(temp)),
                     isPast: obsTime <= now,
-                    isCurrent: false
+                    isCurrent: false,
+                    isHighConfidence: isHighConfidence
                 });
             }
         }
     });
 
     console.log(`  Found ${allData.length} observations`);
+    const highConfidenceObs = allData.filter(d => d.isHighConfidence);
+    console.log(`  High-confidence observations: ${highConfidenceObs.length}`);
     if (allData.length > 0) {
         // Sort to check actual time range
         const sortedObs = [...allData].sort((a, b) => a.time - b.time);
@@ -332,12 +339,20 @@ function processWeatherData(location, observations, forecast, gridTemperatures =
     const minItem = allData.find(d => d.temp === minTemp);
     const current = allData.find(d => d.isCurrent)?.temp || temps[temps.length - 1];
 
+    // Calculate observed max (only from past observations)
+    const pastData = allData.filter(d => d.isPast);
+    const observedMaxTemp = pastData.length > 0 ? Math.max(...pastData.map(d => d.temp)) : null;
+    const observedMaxItem = observedMaxTemp !== null ? pastData.find(d => d.temp === observedMaxTemp) : null;
+
     // Mark the max and min temperature items
     if (maxItem) {
         maxItem.isMax = true;
     }
     if (minItem) {
         minItem.isMin = true;
+    }
+    if (observedMaxItem) {
+        observedMaxItem.isObservedMax = true;
     }
 
     return {
@@ -349,7 +364,9 @@ function processWeatherData(location, observations, forecast, gridTemperatures =
             current,
             trend,
             maxTime: maxItem?.time,
-            minTime: minItem?.time
+            minTime: minItem?.time,
+            observedMax: observedMaxTemp,
+            observedMaxTime: observedMaxItem?.time
         }
     };
 }
@@ -392,6 +409,14 @@ function renderAirportCard(weatherData) {
     }) : '';
     const minIsPast = stats.minTime && stats.minTime <= now;
 
+    const observedMaxTimeStr = stats.observedMaxTime ? stats.observedMaxTime.toLocaleTimeString('en-US', {
+        timeZone: location.timezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    }) : '';
+    const hasObservedMax = stats.observedMax !== null;
+
     return `
                 <div class="airport-card">
                     <div class="airport-header">
@@ -400,6 +425,15 @@ function renderAirportCard(weatherData) {
                     </div>
 
                     <div class="stats-bar">
+                        ${hasObservedMax ? `
+                        <div class="stat" onclick="document.getElementById('temp-observed-max')?.scrollIntoView({ behavior: 'smooth', block: 'center' })" style="cursor: pointer;">
+                            <div class="stat-label">OBSERVED MAX</div>
+                            <div class="stat-value" style="color: #f59e0b;">${stats.observedMax.toFixed(1)}°F</div>
+                            <div style="font-size: 0.75em; color: #999; margin-top: 4px;">
+                                ${observedMaxTimeStr} (past)
+                            </div>
+                        </div>
+                        ` : ''}
                         <div class="stat" onclick="document.getElementById('temp-max')?.scrollIntoView({ behavior: 'smooth', block: 'center' })" style="cursor: pointer;">
                             <div class="stat-label">24hr MAX</div>
                             <div class="stat-value max">${stats.max.toFixed(1)}°F</div>
@@ -448,16 +482,28 @@ function renderAirportCard(weatherData) {
             itemClass += ' future';
         }
 
+        // Add high confidence indicator after time (will be added below)
+        let confidenceBadge = '';
+        if (item.isHighConfidence) {
+            confidenceBadge = '<span class="label-badge" style="background: #10b981; font-size: 0.7em;">(high confidence)</span>';
+        }
+
+        // Add OBSERVED MAX indicator if this is the observed max temp (check first for priority)
+        if (item.isObservedMax) {
+            extraBadge += '<span class="label-badge" style="background: #f59e0b;">OBSERVED MAX</span>';
+            itemId = 'temp-observed-max';
+        }
+
         // Add MAX indicator if this is the max temp
         if (item.isMax) {
-            extraBadge = '<span class="label-badge" style="background: #ff4444;">MAX</span>';
-            itemId = 'temp-max';
+            extraBadge += ' <span class="label-badge" style="background: #ff4444;">MAX</span>';
+            if (!itemId) itemId = 'temp-max';
         }
 
         // Add MIN indicator if this is the min temp
         if (item.isMin) {
-            extraBadge = '<span class="label-badge" style="background: #4444ff;">MIN</span>';
-            itemId = 'temp-min';
+            extraBadge += ' <span class="label-badge" style="background: #4444ff;">MIN</span>';
+            if (!itemId) itemId = 'temp-min';
         }
 
         const idAttr = itemId ? `id="${itemId}"` : '';
@@ -467,6 +513,7 @@ function renderAirportCard(weatherData) {
                                     <div class="time-label">
                                         ${badge}
                                         ${timeStr}
+                                        ${confidenceBadge}
                                         ${extraBadge}
                                     </div>
                                     <div class="temp-value">${item.temp.toFixed(1)}°F</div>
@@ -476,6 +523,15 @@ function renderAirportCard(weatherData) {
                     </div>
 
                     <div class="stats-bar">
+                        ${hasObservedMax ? `
+                        <div class="stat" onclick="document.getElementById('temp-observed-max')?.scrollIntoView({ behavior: 'smooth', block: 'center' })" style="cursor: pointer;">
+                            <div class="stat-label">OBSERVED MAX</div>
+                            <div class="stat-value" style="color: #f59e0b;">${stats.observedMax.toFixed(1)}°F</div>
+                            <div style="font-size: 0.75em; color: #999; margin-top: 4px;">
+                                ${observedMaxTimeStr} (past)
+                            </div>
+                        </div>
+                        ` : ''}
                         <div class="stat" onclick="document.getElementById('temp-max')?.scrollIntoView({ behavior: 'smooth', block: 'center' })" style="cursor: pointer;">
                             <div class="stat-label">24hr MAX</div>
                             <div class="stat-value max">${stats.max.toFixed(1)}°F</div>

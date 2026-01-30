@@ -1,5 +1,8 @@
 const KALSHI_BASE_URL = 'https://api.elections.kalshi.com/trade-api/v2';
-const CORS_PROXY = 'https://corsproxy.io/?';
+
+// Cloudflare Worker proxy to handle CORS
+// Replace this with your actual worker URL after deploying
+const CLOUDFLARE_WORKER = 'https://weather-kalshi.aayushalex.workers.dev/';
 
 // Location mapping to Kalshi event tickers
 const KALSHI_EVENT_MAPPING = {
@@ -35,9 +38,19 @@ async function fetchKalshiMarkets(locationCode) {
 
         console.log(`Fetching Kalshi markets for event: ${eventTicker}`);
 
-        // Fetch markets for today's specific event using CORS proxy
-        const apiUrl = `${KALSHI_BASE_URL}/markets?event_ticker=${eventTicker}&status=open`;
-        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(apiUrl)}`);
+        // Fetch markets for today's specific event
+        const kalshiUrl = `${KALSHI_BASE_URL}/markets?event_ticker=${eventTicker}&status=open`;
+
+        // Use Cloudflare Worker proxy to handle CORS
+        const proxyUrl = `${CLOUDFLARE_WORKER}?url=${encodeURIComponent(kalshiUrl)}`;
+
+        const response = await fetch(proxyUrl);
+
+        if (!response.ok) {
+            console.error(`Kalshi API error: ${response.status} ${response.statusText}`);
+            return null;
+        }
+
         const data = await response.json();
 
         if (!data.markets || data.markets.length === 0) {
