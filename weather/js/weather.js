@@ -605,6 +605,20 @@ async function loadAllLocations() {
 
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', () => {
+    // Check for location in URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const locParam = urlParams.get('loc');
+
+    if (locParam) {
+        // Check if it's a valid location code (with or without 'K' prefix)
+        const codeToFind = locParam.startsWith('K') ? locParam : `K${locParam}`;
+        const matchedLocation = LOCATIONS.find(loc => loc.code === codeToFind);
+
+        if (matchedLocation) {
+            selectedLocation = matchedLocation.code;
+        }
+    }
+
     initLocationButtons();
     loadAllLocations();
 });
