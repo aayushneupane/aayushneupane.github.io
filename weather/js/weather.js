@@ -607,7 +607,7 @@ async function loadAllLocations() {
 window.addEventListener('DOMContentLoaded', () => {
     // Check for location in URL parameter
     const urlParams = new URLSearchParams(window.location.search);
-    const locParam = urlParams.get('loc');
+    const locParam = urlParams.get('location');
 
     if (locParam) {
         // Check if it's a valid location code (with or without 'K' prefix)

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(curl:*)",
-      "WebFetch(domain:api.elections.kalshi.com)"
+      "WebFetch(domain:api.elections.kalshi.com)",
+      "WebFetch(domain:weather-kalshi.aayushalex.workers.dev)"
     ]
   }
 }
